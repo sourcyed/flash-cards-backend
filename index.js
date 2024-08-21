@@ -41,7 +41,7 @@ app.post('/api/words', (request, response) => {
     const word = {...request.body}
     if (!word.word)
         return response.status(400).json({error: 'word missing'})
-    if (!word.word)
+    if (!word.meaning)
         return response.status(400).json({error: 'meaning missing'})
     word.id = word.word
     setWords(words.concat(word))
