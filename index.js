@@ -88,16 +88,12 @@ app.get('/api/photos/:id', (request, response) => {
             const query = word.meaning
             client.photos.search({ query, per_page: 1 })
             .then(photos => {
-                if (photos.photos) {
-                    const photo = photos.photos[0].src.tiny
-                    const updatedWord = {...word, picture: photo}
-                    setWords(words.map(w => w.id !== id ? w : updatedWord))
-                    response.json({ photo }) 
-                }
-                else {
-                    response.status(404).json({error: "no image found"})  
+                const photo = photos.photos.length > 0 ? photos.photos[0].src.tiny : '/'
+                const wordWithPic = {...word, picture: photo}
+                setWords(words.map(w => w.id !== id ? w : wordWithPic))
+                response.json({ wordWithPic }) 
                 } 
-            })
+            )
         }
     }
     else {
