@@ -2,7 +2,6 @@ const express = require('express')
 const cors = require('cors')
 const pexels = require('pexels')
 const fs = require('fs')
-const { log } = require('console')
 const app = express()
 
 const PEXELS_API_KEY = process.env.PEXELS_API_KEY
@@ -64,7 +63,7 @@ app.put('/api/words/:id', (request, response) => {
     const wordToUpdate = words.find(w => w.id === id)
     const body = {...request.body}
     const updatedWord = { ...wordToUpdate, word: body.word, meaning: body.meaning }
-    setWords(words = words.concat(updatedWord))
+    setWords(words.map(w => w.id !== id ? w : updatedWord))
     response.json(updatedWord)
 })
 
@@ -75,17 +74,35 @@ app.delete('/api/words/:id', (request, response) => {
     response.status(204).end()
 })
 
-app.get('/api/photos/:query', (request, response) => {
+app.get('/api/photos/:id', (request, response) => {
     if (!client)
         return response.status(500).json({error: "invalid API key"})
 
-    const query = request.params.query
-    client.photos.search({ query, per_page: 1 })
-    .then(photos => {
-        photos.photos
-        ? (response.json({ photo: photos.photos[0].src.tiny })) 
-        : response.status(404).json({error: "no image found"})
-    })
+    const id = request.params.id
+    const word = words.find(w => w.id === id)
+    if (word) {
+        if (word.picture) {
+            response.json(word.picture)
+        }
+        else {
+            const query = word.meaning
+            client.photos.search({ query, per_page: 1 })
+            .then(photos => {
+                if (photos.photos) {
+                    const photo = photos.photos[0].src.tiny
+                    const updatedWord = {...word, picture: photo}
+                    setWords(words.map(w => w.id !== id ? w : updatedWord))
+                    response.json({ photo }) 
+                }
+                else {
+                    response.status(404).json({error: "no image found"})  
+                } 
+            })
+        }
+    }
+    else {
+        response.status(404).json({error: "word does not exist"})
+    }
 })
 
 const unknownEndpoint = (request, response) => {
