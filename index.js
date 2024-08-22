@@ -1,7 +1,18 @@
 const express = require('express')
 const cors = require('cors')
+const pexels = require('pexels')
 const fs = require('fs')
+const { log } = require('console')
 const app = express()
+
+const PEXELS_API_KEY = process.env.PEXELS_API_KEY
+let client = null
+try {
+    client = pexels.createClient(PEXELS_API_KEY)
+}
+catch (err) {
+     console.log(err) 
+}
 
 app.use(cors())
 app.use(express.json())
@@ -62,6 +73,19 @@ app.delete('/api/words/:id', (request, response) => {
     setWords(words.filter(word => word.id !== id))
 
     response.status(204).end()
+})
+
+app.get('/api/photos/:query', (request, response) => {
+    if (!client)
+        return response.status(500).json({error: "invalid API key"})
+
+    const query = request.params.query
+    client.photos.search({ query, per_page: 1 })
+    .then(photos => {
+        photos.photos
+        ? (response.json({ photo: photos.photos[0].src.tiny })) 
+        : response.status(404).json({error: "no image found"})
+    })
 })
 
 const unknownEndpoint = (request, response) => {
