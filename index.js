@@ -1,8 +1,11 @@
 const express = require('express')
 const cors = require('cors')
 const pexels = require('pexels')
-const fs = require('fs')
+const mongoose = require('mongoose')
+const Word = require('./models/word')
 const app = express()
+
+
 
 const PEXELS_API_KEY = process.env.PEXELS_API_KEY
 let client = null
@@ -27,51 +30,40 @@ const requestLogger = (request, response, next) => {
 
 app.use(requestLogger)
 
-const db = 'db.json'
-
-const getWords = () => {
-  const dbObject = JSON.parse(fs.readFileSync(db).toString())
-  return dbObject.words
-}
-
-
-const setWords = ws => {
-  words = ws
-  const dbObject = { words }
-  fs.writeFileSync(db, JSON.stringify(dbObject))
-}
-
-let words = getWords()
 
 app.get('/api/words', (request, response) => {
-    response.json(words)
+    Word.find({}).then(ws => response.json(ws))
 })
 
 app.post('/api/words', (request, response) => {
-    const word = {...request.body}
-    if (!word.word)
+    const body = request.body
+    if (!body.word)
         return response.status(400).json({error: 'word missing'})
-    if (!word.meaning)
+    if (!body.meaning)
         return response.status(400).json({error: 'meaning missing'})
-    word.id = word.word
-    setWords(words.concat(word))
-    response.json(word)
+    const word = new Word({
+        word: body.word,
+        meaning: body.meaning,
+    })
+
+    word.save().then(savedWord => {
+        response.json(savedWord)
+    })
 })
 
 app.put('/api/words/:id', (request, response) => {
-    const id = request.params.id
-    const wordToUpdate = words.find(w => w.id === id)
-    const body = {...request.body}
-    const updatedWord = { ...wordToUpdate, word: body.word, meaning: body.meaning }
-    setWords(words.map(w => w.id !== id ? w : updatedWord))
-    response.json(updatedWord)
+    const body = request.body
+    const word = { word: body.word, meaning: body.meaning }
+    Word.findByIdAndUpdate(request.params.id, word).then(updatedWord => {
+        response.json(updatedWord)
+    })
 })
 
 app.delete('/api/words/:id', (request, response) => {
-    const id = request.params.id
-    setWords(words.filter(word => word.id !== id))
-
-    response.status(204).end()
+    Word.findByIdAndDelete(request.params.id)
+        .then(result => {
+            response.status(204).end()
+        })
 })
 
 app.get('/api/photos/:id', (request, response) => {
@@ -79,8 +71,7 @@ app.get('/api/photos/:id', (request, response) => {
         return response.status(500).json({error: "invalid API key"})
 
     const id = request.params.id
-    const word = words.find(w => w.id === id)
-    if (word) {
+    Word.findById(id).then(word => {
         if (word.picture) {
             response.json(word.picture)
         }
@@ -89,16 +80,17 @@ app.get('/api/photos/:id', (request, response) => {
             client.photos.search({ query, per_page: 1 })
             .then(photos => {
                 const photo = photos.photos.length > 0 ? photos.photos[0].src.tiny : '/'
-                const wordWithPic = {...word, picture: photo}
-                setWords(words.map(w => w.id !== id ? w : wordWithPic))
-                response.json({ wordWithPic }) 
+                const wordWithPic = {word: word.word, meaning: word.meaning, picture: photo}
+                Word.findByIdAndUpdate(id, wordWithPic).then(updatedWord => {
+                    response.json(photo) 
+                })
                 } 
             )
         }
-    }
-    else {
+    })
+    .catch(error => {
         response.status(404).json({error: "word does not exist"})
-    }
+    })
 })
 
 const unknownEndpoint = (request, response) => {
