@@ -93,6 +93,15 @@ app.get('/api/photos/:id', (request, response) => {
     })
 })
 
+app.get('/api/auth/:id', (request, response) => {
+    const clientPassword = request.params.id
+    const password = process.env.PASSWORD ||'password'
+    if (password)
+        response.json(password === clientPassword)
+    else
+        response.status(404).end()
+})
+
 const unknownEndpoint = (request, response) => {
     response.status(404).json({error: 'unknown endpoint'})
 }
