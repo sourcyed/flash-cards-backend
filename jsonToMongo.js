@@ -9,7 +9,7 @@ words.forEach(w => {
     const word = new Word({
         word: w.word,
         meaning: w.meaning,
-        picture: w.picure,
+        picture: w.picture,
     })
     word.save().then(sw => console.log(sw, 'saved'))
 })
