@@ -64,6 +64,9 @@ app.delete('/api/words/:id', (request, response) => {
         .then(result => {
             response.status(204).end()
         })
+        .catch(error => {
+            response.status(404).end()
+        })
 })
 
 app.get('/api/photos/:id', (request, response) => {
