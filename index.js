@@ -3,6 +3,7 @@ const cors = require('cors')
 const pexels = require('pexels')
 const mongoose = require('mongoose')
 const Word = require('./models/word')
+const word = require('./models/word')
 const app = express()
 
 
@@ -44,6 +45,7 @@ app.post('/api/words', (request, response) => {
     const word = new Word({
         word: body.word,
         meaning: body.meaning,
+        sentence: body.sentence
     })
 
     word.save().then(savedWord => {
@@ -53,7 +55,7 @@ app.post('/api/words', (request, response) => {
 
 app.put('/api/words/:id', (request, response) => {
     const body = request.body
-    const word = { word: body.word, meaning: body.meaning }
+    const word = { word: body.word, meaning: body.meaning, sentence: body.sentence }
     Word.findByIdAndUpdate(request.params.id, word, { new: true }).then(updatedWord => {
         response.json(updatedWord)
     })
@@ -71,7 +73,7 @@ app.delete('/api/words/:id', (request, response) => {
 
 app.get('/api/photos/:id', (request, response) => {
     if (!client)
-        return response.status(500).json({error: "invalid API key"})
+        return response.status(500).json({error: "invalid photo API key"})
 
     const id = request.params.id
     Word.findById(id).then(word => {

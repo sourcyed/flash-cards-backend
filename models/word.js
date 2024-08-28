@@ -15,6 +15,7 @@ mongoose.connect(url)
 const wordSchema = new mongoose.Schema({
     word: String,
     meaning: String,
+    sentence: String,
     picture: {
         type: String,
         default: ''
