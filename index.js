@@ -55,7 +55,7 @@ app.post('/api/words', (request, response) => {
 
 app.put('/api/words/:id', (request, response) => {
     const body = request.body
-    const word = { word: body.word, meaning: body.meaning, sentence: body.sentence }
+    const word = { word: body.word, meaning: body.meaning, sentence: body.sentence, picture: body.picture }
     Word.findByIdAndUpdate(request.params.id, word, { new: true }).then(updatedWord => {
         response.json(updatedWord)
     })
