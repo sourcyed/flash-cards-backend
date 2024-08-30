@@ -91,6 +91,9 @@ app.get('/api/photos/:id', (request, response) => {
                 })
                 } 
             )
+            .catch(error => {
+                return response.status(500).json({error: "photo service is not available"})
+            })
         }
     })
     .catch(error => {
