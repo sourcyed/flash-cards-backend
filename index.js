@@ -111,27 +111,24 @@ app.delete('/api/words/:id', (request, response) => {
 app.get('/api/photos/:id', (request, response) => {
     if (!pexels)
         return response.status(500).json({error: "invalid photo API key"})
-
+    
+    const MAX_PHOTOS = 5
     const id = request.params.id
     Word.findById(id).then(word => {
-        if (word.picture) {
-            response.json(word.picture)
-        }
-        else {
-            const query = word.meaning
-            pexels.photos.search({ query, per_page: 1 })
-            .then(photos => {
-                const photo = photos.photos.length > 0 ? photos.photos[0].src.tiny : '/'
-                const wordWithPic = {word: word.word, meaning: word.meaning, picture: photo}
-                Word.findByIdAndUpdate(id, wordWithPic).then(updatedWord => {
-                    response.json(photo) 
-                })
-                } 
-            )
-            .catch(error => {
-                return response.status(500).json({error: "photo service is not available"})
+        const query = word.meaning
+        pexels.photos.search({ query, orientation: 'landscape', per_page: MAX_PHOTOS })
+        .then(r => {
+            const photos = r.photos.filter(x => x.src.tiny !== word.picture)
+            const photo = photos.length > 0 ? photos[Math.floor(Math.random() * photos.length)].src.tiny : '/'
+            const wordWithPic = {word: word.word, meaning: word.meaning, picture: photo}
+            Word.findByIdAndUpdate(id, wordWithPic).then(updatedWord => {
+                response.json(photo) 
             })
-        }
+            } 
+        )
+        .catch(error => {
+            return response.status(500).json({error: "photo service is not available"})
+        })
     })
     .catch(error => {
         response.status(404).json({error: "word does not exist"})
