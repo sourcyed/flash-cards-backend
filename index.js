@@ -1,20 +1,29 @@
 const express = require('express')
 const cors = require('cors')
-const pexels = require('pexels')
+const Pexels = require('pexels')
 const mongoose = require('mongoose')
 const Word = require('./models/word')
 const word = require('./models/word')
+const OpenAI = require('openai')
 const app = express()
 
-
-
 const PEXELS_API_KEY = process.env.PEXELS_API_KEY
-let client = null
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+
+let openai = null
 try {
-    client = pexels.createClient(PEXELS_API_KEY)
+    openai = new OpenAI({apiKey: OPENAI_API_KEY})
 }
 catch (err) {
-     console.log(err) 
+    console.log(err)
+}
+
+let pexels = null
+try {
+    pexels = Pexels.createClient(PEXELS_API_KEY)
+}
+catch (err) {
+    console.log(err) 
 }
 
 app.use(cors())
@@ -42,15 +51,43 @@ app.post('/api/words', (request, response) => {
         return response.status(400).json({error: 'word missing'})
     if (!body.meaning)
         return response.status(400).json({error: 'meaning missing'})
-    const word = new Word({
-        word: body.word,
-        meaning: body.meaning,
-        sentence: body.sentence
-    })
 
-    word.save().then(savedWord => {
-        response.json(savedWord)
-    })
+    if (!openai || body.sentence || body.word.length > 25) {
+        const word = new Word({
+            word: body.word,
+            meaning: body.meaning,
+            sentence: body.sentence
+        })
+        word.save().then(savedWord => {
+            response.json(savedWord)
+        })        
+    } else {
+        openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [{ role: 'user', content: `Kirjoita esimerkkilause sanalle '${body.word}', max 50 merkkiä`}]
+        }).then(c => {
+            const sentence = c.choices[0].message.content
+            const word = new Word({
+                word: body.word,
+                meaning: body.meaning,
+                sentence
+            })
+            word.save().then(savedWord => {
+                response.json(savedWord)
+            })
+        })
+        .catch(err => {
+            console.log(err)
+            const word = new Word({
+                word: body.word,
+                meaning: body.meaning,
+                sentence: body.sentence
+            })
+            word.save().then(savedWord => {
+                response.json(savedWord)
+            })
+        })
+    }
 })
 
 app.put('/api/words/:id', (request, response) => {
@@ -72,7 +109,7 @@ app.delete('/api/words/:id', (request, response) => {
 })
 
 app.get('/api/photos/:id', (request, response) => {
-    if (!client)
+    if (!pexels)
         return response.status(500).json({error: "invalid photo API key"})
 
     const id = request.params.id
@@ -82,7 +119,7 @@ app.get('/api/photos/:id', (request, response) => {
         }
         else {
             const query = word.meaning
-            client.photos.search({ query, per_page: 1 })
+            pexels.photos.search({ query, per_page: 1 })
             .then(photos => {
                 const photo = photos.photos.length > 0 ? photos.photos[0].src.tiny : '/'
                 const wordWithPic = {word: word.word, meaning: word.meaning, picture: photo}
