@@ -56,6 +56,7 @@ app.post('/api/words', (request, response) => {
         const word = new Word({
             word: body.word,
             meaning: body.meaning,
+            picture: body.picture,
             sentence: body.sentence
         })
         word.save().then(savedWord => {
@@ -70,6 +71,7 @@ app.post('/api/words', (request, response) => {
             const word = new Word({
                 word: body.word,
                 meaning: body.meaning,
+                picture: body.picture,
                 sentence
             })
             word.save().then(savedWord => {
@@ -81,6 +83,7 @@ app.post('/api/words', (request, response) => {
             const word = new Word({
                 word: body.word,
                 meaning: body.meaning,
+                picture: body.picture,
                 sentence: body.sentence
             })
             word.save().then(savedWord => {
