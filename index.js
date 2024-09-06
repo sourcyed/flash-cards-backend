@@ -121,8 +121,8 @@ app.get('/api/photos/:id', (request, response) => {
         const query = word.meaning
         pexels.photos.search({ query, orientation: 'landscape', per_page: MAX_PHOTOS })
         .then(r => {
-            const photos = r.photos.filter(x => x.src.tiny !== word.picture)
-            const photo = photos.length > 0 ? photos[Math.floor(Math.random() * photos.length)].src.tiny : '/'
+            const photos = r.photos
+            const photo = photos.length > 0 ? photos[word.picture === '/' ? 0 : (photos.findIndex(x => x.src.tiny === word.picture) + 1) % photos.length].src.tiny : '/'
             const wordWithPic = {word: word.word, meaning: word.meaning, picture: photo}
             Word.findByIdAndUpdate(id, wordWithPic).then(updatedWord => {
                 response.json(photo) 
