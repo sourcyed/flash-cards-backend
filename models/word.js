@@ -1,3 +1,4 @@
+require('dotenv').config()
 const mongoose = require('mongoose')
 
 mongoose.set('strictQuery', false)
@@ -25,7 +26,6 @@ const wordSchema = new mongoose.Schema({
     },
     sentence: {
         type: String,
-        minLength: 2,
         required: false
     },
     picture: {
