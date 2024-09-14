@@ -47,10 +47,6 @@ app.get('/api/words', (request, response) => {
 
 app.post('/api/words', (request, response) => {
     const body = request.body
-    if (!body.word)
-        return response.status(400).json({error: 'word missing'})
-    if (!body.meaning)
-        return response.status(400).json({error: 'meaning missing'})
 
     if (!openai || body.sentence || body.word.length > 25) {
         const word = new Word({
@@ -96,7 +92,7 @@ app.post('/api/words', (request, response) => {
 app.put('/api/words/:id', (request, response) => {
     const body = request.body
     const word = { word: body.word, meaning: body.meaning, sentence: body.sentence, picture: body.picture }
-    Word.findByIdAndUpdate(request.params.id, word, { new: true }).then(updatedWord => {
+    Word.findByIdAndUpdate(request.params.id, word, { new: true, runValidators: true, context: 'query' }).then(updatedWord => {
         response.json(updatedWord)
     })
 })
@@ -111,7 +107,7 @@ app.delete('/api/words/:id', (request, response) => {
         })
 })
 
-app.get('/api/photos/:id', (request, response) => {
+app.get('/api/photos/:id', (request, response, next) => {
     if (!pexels)
         return response.status(500).json({error: "invalid photo API key"})
     
@@ -130,11 +126,11 @@ app.get('/api/photos/:id', (request, response) => {
             } 
         )
         .catch(error => {
-            return response.status(500).json({error: "photo service is not available"})
+            return next(error)
         })
     })
     .catch(error => {
-        response.status(404).json({error: "word does not exist"})
+        return next(error)
     })
 })
 
@@ -152,6 +148,19 @@ const unknownEndpoint = (request, response) => {
 }
 
 app.use(unknownEndpoint)
+
+const errorHandler = (error, request, response, next) => {
+    console.error(error.message)
+
+    if (error.name === 'CastError') {
+        return response.status(400).send({ error: 'malformatted id' })
+    } else if (error.name === 'ValidationError') {
+        return response.status(400).json({error: error.message})
+    }
+
+    next(error)
+}
+app.use(errorHandler)
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
