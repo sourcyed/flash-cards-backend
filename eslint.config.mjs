@@ -1,5 +1,4 @@
 import globals from "globals";
-import pluginJs from "@eslint/js";
 import js from '@eslint/js'
 import stylisticJs from '@stylistic/eslint-plugin-js'
 
