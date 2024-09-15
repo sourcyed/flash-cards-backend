@@ -31,7 +31,7 @@ export default [
         'error',
         'single'
       ],
-      '@stylistic/js/indent': [
+      '@stylistic/js/semi': [
         'error',
         'never'
       ],
