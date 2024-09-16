@@ -38,7 +38,7 @@ app.get('/api/words', (_request, response) => {
 
 app.post('/api/words', (request, response) => {
   const body = request.body
-
+  console.log('Adding word ' + body.word + '...')
   if (!openai || body.sentence || body.word.length > 25) {
     const word = new Word({
       word: body.word,
@@ -51,11 +51,13 @@ app.post('/api/words', (request, response) => {
     })
   }
   else {
+    console.log('Generating example sentence...')
     openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [ { role: 'user', content: `Kirjoita esimerkkilause sanalle '${body.word}', max 50 merkkiä` } ]
     })
       .then(c => {
+        console.log('Sentence generated.')
         const sentence = c.choices[0].message.content
         const word = new Word({
           word: body.word,
@@ -85,17 +87,21 @@ app.post('/api/words', (request, response) => {
 app.put('/api/words/:id', (request, response) => {
   const body = request.body
   const word = { word: body.word, meaning: body.meaning, sentence: body.sentence, picture: body.picture }
+  console.log('Updating word new word ' + word.word + '...')
   Word.findByIdAndUpdate(request.params.id, word, { new: true, runValidators: true, context: 'query' }).then(updatedWord => {
     response.json(updatedWord)
   })
 })
 
 app.delete('/api/words/:id', (request, response) => {
+  console.log('Updating word new word ' + request.params.id + '...')
   Word.findByIdAndDelete(request.params.id)
     .then(() => {
+      console.log('Deleted.')
       response.status(204).end()
     })
     .catch(() => {
+      console.log('Word was not found')
       response.status(404).end()
     })
 })
@@ -103,16 +109,19 @@ app.delete('/api/words/:id', (request, response) => {
 app.get('/api/photos/:id', (request, response, next) => {
   if (!pexels)
     return response.status(500).json( { error: 'invalid photo API key' } )
+  console.log('Looking for images online')
   const MAX_PHOTOS = 5
   const id = request.params.id
   Word.findById(id).then(word => {
     const query = word.meaning
     pexels.photos.search({ query, orientation: 'landscape', per_page: MAX_PHOTOS })
       .then(r => {
+        console.log('Found images online')
         const photos = r.photos
         const photo = photos.length > 0 ? photos[word.picture === '/' ? 0 : (photos.findIndex(x => x.src.tiny === word.picture) + 1) % photos.length].src.tiny : '/'
         const wordWithPic = { word: word.word, meaning: word.meaning, picture: photo }
         Word.findByIdAndUpdate(id, wordWithPic).then(() => {
+          console.log('Added the image for ' + word.word)
           response.json(photo)
         })
       }
