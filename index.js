@@ -1,45 +1,33 @@
+// Import statements
 require('dotenv').config()
 const express = require('express')
 const morgan = require('morgan')
 const cors = require('cors')
-const Pexels = require('pexels')
 const Word = require('./models/word')
-const OpenAI = require('openai')
 const app = express()
+const aiService = require('./services/ai')
+const photoService = require('./services/photo')
 
-const PEXELS_API_KEY = process.env.PEXELS_API_KEY
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 
-let openai = null
-try {
-  openai = new OpenAI( { apiKey: OPENAI_API_KEY } )
-}
-catch (err) {
-  console.log(err)
-}
-
-let pexels = null
-try {
-  pexels = Pexels.createClient(PEXELS_API_KEY)
-}
-catch (err) {
-  console.log(err)
-}
-
+// Adding initial middlewares
 app.use(express.json())
 app.use(express.static('dist'))
 app.use(cors())
 morgan.token('body', function (req) { JSON.stringify(req.body); return JSON.stringify(req.body) })
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
+// Returns words list from database
 app.get('/api/words', (_request, response) => {
   Word.find({}).then(ws => response.json(ws))
 })
 
+// Adds new word to database
 app.post('/api/words', (request, response) => {
   const body = request.body
   console.log('Adding word ' + body.word + '...')
-  if (!openai || body.sentence || body.word.length > 25) {
+
+  // Add word if example sentence is provided
+  if (!aiService.available() || body.sentence || body.word.length > 25) {
     const word = new Word({
       word: body.word,
       meaning: body.meaning,
@@ -50,12 +38,10 @@ app.post('/api/words', (request, response) => {
       response.json(savedWord)
     })
   }
+  // Generate example sentence if one is not provided and add word
   else {
     console.log('Generating example sentence...')
-    openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [ { role: 'user', content: `Kirjoita esimerkkilause sanalle '${body.word}', max 50 merkkiä` } ]
-    })
+    aiService.generateSentence(body.word)
       .then(c => {
         console.log('Sentence generated.')
         const sentence = c.choices[0].message.content
@@ -69,14 +55,10 @@ app.post('/api/words', (request, response) => {
           response.json(savedWord)
         })
       })
+      // Add word without example sentence if error occured
       .catch(err => {
         console.log(err)
-        const word = new Word({
-          word: body.word,
-          meaning: body.meaning,
-          picture: body.picture,
-          sentence: body.sentence
-        })
+        const word = new Word({ ...body })
         word.save().then(savedWord => {
           response.json(savedWord)
         })
@@ -84,6 +66,7 @@ app.post('/api/words', (request, response) => {
   }
 })
 
+// Update the meaning of an existing word
 app.put('/api/words/:id', (request, response) => {
   const body = request.body
   const word = { word: body.word, meaning: body.meaning, sentence: body.sentence, picture: body.picture }
@@ -93,6 +76,7 @@ app.put('/api/words/:id', (request, response) => {
   })
 })
 
+// Delete word from database
 app.delete('/api/words/:id', (request, response) => {
   console.log('Updating word new word ' + request.params.id + '...')
   Word.findByIdAndDelete(request.params.id)
@@ -106,35 +90,33 @@ app.delete('/api/words/:id', (request, response) => {
     })
 })
 
+// Return requested image
 app.get('/api/photos/:id', (request, response, next) => {
-  if (!pexels)
+  if (!photoService.available())
     return response.status(500).json( { error: 'invalid photo API key' } )
   console.log('Looking for images online')
-  const MAX_PHOTOS = 5
   const id = request.params.id
-  Word.findById(id).then(word => {
-    const query = word.meaning
-    pexels.photos.search({ query, orientation: 'landscape', per_page: MAX_PHOTOS })
-      .then(r => {
-        console.log('Found images online')
-        const photos = r.photos
-        const photo = photos.length > 0 ? photos[word.picture === '/' ? 0 : (photos.findIndex(x => x.src.tiny === word.picture) + 1) % photos.length].src.tiny : '/'
-        const wordWithPic = { word: word.word, meaning: word.meaning, picture: photo }
-        Word.findByIdAndUpdate(id, wordWithPic).then(() => {
-          console.log('Added the image for ' + word.word)
-          response.json(photo)
+  Word.findById(id)
+    .then(word => {
+      const query = word.meaning
+      photoService.getPhoto(query, word.picture)
+        .then(photo => {
+          const wordWithPic = { word: word.word, meaning: word.meaning, picture: photo }
+          Word.findByIdAndUpdate(id, wordWithPic).then(() => {
+            console.log('Added the image for ' + word.word)
+            response.json(photo)
+          })
         })
-      }
-      )
-      .catch(error => {
-        return next(error)
-      })
-  })
+        .catch(error => {
+          return next(error)
+        })
+    })
     .catch(error => {
       return next(error)
     })
 })
 
+// Authentication
 app.get('/api/auth/:id', (request, response) => {
   const clientPassword = request.params.id
   const password = process.env.PASSWORD ||'password'
