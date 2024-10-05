@@ -1,7 +1,7 @@
 const fs = require('fs')
 const Word = require('../models/word')
 
-const backup = 'backup.json'
+const backup = 'backup/backup_' + new Date().toISOString() + '.json'
 
 Word.find({}).then(words => {
   words.map(w => {

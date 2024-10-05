@@ -1,7 +1,7 @@
 const fs = require('fs')
 const Word = require('../models/word')
 
-const db = 'db.json'
+const db = process.argv[2]
 
 const words = JSON.parse(fs.readFileSync(db).toString()).words
 
