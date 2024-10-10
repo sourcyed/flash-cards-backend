@@ -70,7 +70,7 @@ app.post('/api/words', (request, response) => {
 app.put('/api/words/:id', (request, response) => {
   const body = request.body
   const word = { word: body.word, meaning: body.meaning, sentence: body.sentence, picture: body.picture }
-  console.log('Updating word new word ' + word.word + '...')
+  console.log('Updating word ' + word.word + '...')
   Word.findByIdAndUpdate(request.params.id, word, { new: true, runValidators: true, context: 'query' }).then(updatedWord => {
     response.json(updatedWord)
   })
