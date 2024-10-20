@@ -8,6 +8,7 @@ const app = express()
 const aiService = require('./services/ai')
 const photoService = require('./services/photo')
 
+const MAX_WORD_LENGTH_FOR_AI = 50
 
 // Adding initial middlewares
 app.use(express.json())
@@ -27,7 +28,7 @@ app.post('/api/words', (request, response) => {
   console.log('Adding word ' + body.word + '...')
 
   // Add word if example sentence is provided
-  if (!aiService.available() || body.sentence || body.word.length > 25) {
+  if (!aiService.available() || body.sentence || body.word.length > MAX_WORD_LENGTH_FOR_AI) {
     const word = new Word({
       word: body.word,
       meaning: body.meaning,
