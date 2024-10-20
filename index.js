@@ -103,9 +103,9 @@ app.get('/api/photos/:id', (request, response, next) => {
       photoService.getPhoto(query, word.picture)
         .then(photo => {
           const wordWithPic = { word: word.word, meaning: word.meaning, picture: photo }
-          Word.findByIdAndUpdate(id, wordWithPic).then(() => {
+          Word.findByIdAndUpdate(id, wordWithPic, { new: true, runValidators: true, context: 'query' }).then(updatedWord => {
             console.log('Added the image for ' + word.word)
-            response.json(photo)
+            response.json(updatedWord)
           })
         })
         .catch(error => {
