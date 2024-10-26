@@ -28,43 +28,33 @@ app.post('/api/words', (request, response) => {
   console.log('Adding word ' + body.word + '...')
 
   // Add word if example sentence is provided
-  if (!aiService.available() || body.sentence || body.word.length > MAX_WORD_LENGTH_FOR_AI) {
-    const word = new Word({
-      word: body.word,
-      meaning: body.meaning,
-      picture: body.picture,
-      sentence: body.sentence
+  const word = new Word({
+    word: body.word,
+    meaning: body.meaning,
+    picture: body.picture,
+    sentence: body.sentence
+  })
+  return word.save()
+    .then(savedWord => {
+      if (aiService.available() && !body.sentence && body.word.length < MAX_WORD_LENGTH_FOR_AI) {
+        console.log('Generating example sentence for ' + savedWord.word + '...')
+        return aiService.generateSentence(body.word)
+          .then(c => {
+            console.log('Sentence generated.')
+            const sentence = c.choices[0].message.content
+            savedWord.sentence = sentence
+            return savedWord.save()
+          })
+      } else {
+        return savedWord
+      }
     })
-    word.save().then(savedWord => {
-      response.json(savedWord)
+    .then(savedWord => {
+      return updateImage(savedWord)
     })
-  }
-  // Generate example sentence if one is not provided and add word
-  else {
-    console.log('Generating example sentence...')
-    aiService.generateSentence(body.word)
-      .then(c => {
-        console.log('Sentence generated.')
-        const sentence = c.choices[0].message.content
-        const word = new Word({
-          word: body.word,
-          meaning: body.meaning,
-          picture: body.picture,
-          sentence
-        })
-        word.save().then(savedWord => {
-          response.json(savedWord)
-        })
-      })
-      // Add word without example sentence if error occured
-      .catch(err => {
-        console.log(err)
-        const word = new Word({ ...body })
-        word.save().then(savedWord => {
-          response.json(savedWord)
-        })
-      })
-  }
+    .then(savedWord => {
+      return response.status(201).json(savedWord)
+    })
 })
 
 // Update the meaning of an existing word
@@ -91,31 +81,35 @@ app.delete('/api/words/:id', (request, response) => {
     })
 })
 
-// Return requested image
-app.get('/api/photos/:id', (request, response, next) => {
-  if (!photoService.available())
-    return response.status(500).json( { error: 'invalid photo API key' } )
-  console.log('Looking for images online')
-  const id = request.params.id
-  Word.findById(id)
+// Replace word picture
+app.get('/api/photos/:id', (request, response) => {
+  Word.findById(request.params.id)
     .then(word => {
-      const query = word.meaning
-      photoService.getPhoto(query, word.picture)
-        .then(photo => {
-          const wordWithPic = { word: word.word, meaning: word.meaning, picture: photo }
-          Word.findByIdAndUpdate(id, wordWithPic, { new: true, runValidators: true, context: 'query' }).then(updatedWord => {
-            console.log('Added the image for ' + word.word)
-            response.json(updatedWord)
-          })
-        })
-        .catch(error => {
-          return next(error)
-        })
-    })
-    .catch(error => {
-      return next(error)
+      if (!word) {
+        return response.status(404).end()
+      }
+      return updateImage(word).then(updatedWord => response.status(201).json(updatedWord))
     })
 })
+
+// Return requested image
+const updateImage = (word) => {
+  if (!photoService.available() || word.picture === '/')
+    return word
+
+  console.log('Looking for images online')
+  const query = word.meaning
+  return photoService.getPhoto(query, word.picture)
+    .then(photo => {
+      word.picture = photo
+      console.log('Found image ' + photo + ' for ' + word.word)
+      return word.save()
+    })
+    .catch(error => {
+      console.error(error)
+      return word
+    })
+}
 
 // Authentication
 app.get('/api/auth/:id', (request, response) => {

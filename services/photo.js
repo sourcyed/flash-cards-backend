@@ -21,7 +21,7 @@ const getPhoto = (query, current = null) => {
     .then(r => {
       const photos = r.photos
       const photo = photos.length > 0
-        ? photos[current === '/'
+        ? photos[current === ''
           ? 0
           : (photos.findIndex(x => x.src.tiny === current) + 1) % photos.length].src.tiny
         : '/'
