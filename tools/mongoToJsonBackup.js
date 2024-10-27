@@ -4,8 +4,6 @@ const Word = require('../models/word')
 const logger = require('../utils/logger')
 const config = require('../utils/config')
 
-const backup = 'backup/backup_' + new Date().toISOString() + '.json'
-
 mongoose.set('strictQuery', false)
 const url = config.MONGODB_URI
 logger.info('connecting to', url)
@@ -13,6 +11,8 @@ logger.info('connecting to', url)
 mongoose.connect(url)
   .then(() => {
     logger.info('connected to MongoDB')
+
+    const backup = 'backup/backup_' + new Date().toISOString() + '.json'
 
     Word.find({})
       .then(words => {
