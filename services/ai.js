@@ -1,10 +1,9 @@
 const OpenAI = require('openai')
-
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+const config = require('../utils/config')
 
 let openai = null
 try {
-  openai = new OpenAI( { apiKey: OPENAI_API_KEY } )
+  openai = new OpenAI( { apiKey: config.OPENAI_API_KEY } )
 }
 catch (err) {
   console.log(err)

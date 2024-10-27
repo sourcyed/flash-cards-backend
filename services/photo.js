@@ -1,12 +1,11 @@
 const Pexels = require('pexels')
-
-const PEXELS_API_KEY = process.env.PEXELS_API_KEY
+const config = require('../utils/config')
 
 const MAX_PHOTOS = 5
 
 let pexels = null
 try {
-  pexels = Pexels.createClient(PEXELS_API_KEY)
+  pexels = Pexels.createClient(config.PEXELS_API_KEY)
 }
 catch (err) {
   console.log(err)
