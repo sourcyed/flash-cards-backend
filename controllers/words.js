@@ -13,7 +13,7 @@ wordsRouter.get('/', async (_request, response) => {
 })
 
 // Adds new word to database
-wordsRouter.post('/', async (request, response, next) => {
+wordsRouter.post('/', async (request, response) => {
   const body = request.body
   logger.info('Adding word ' + body.word + '...')
 
@@ -24,15 +24,11 @@ wordsRouter.post('/', async (request, response, next) => {
     picture: body.picture,
     sentence: body.sentence
   })
-  try {
-    let savedWord = await word.save()
-    savedWord = await generateSentence(savedWord)
-    savedWord = await updateImage(savedWord)
-    return response.status(201).json(savedWord)
-  }
-  catch (error) {
-    return next(error)
-  }
+
+  let savedWord = await word.save()
+  savedWord = await generateSentence(savedWord)
+  savedWord = await updateImage(savedWord)
+  return response.status(201).json(savedWord)
 })
 
 // Update the meaning of an existing word
