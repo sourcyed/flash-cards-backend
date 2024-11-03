@@ -13,7 +13,7 @@ wordsRouter.get('/', async (_request, response) => {
 })
 
 // Adds new word to database
-wordsRouter.post('/', async (request, response) => {
+wordsRouter.post('/', async (request, response, next) => {
   const body = request.body
   logger.info('Adding word ' + body.word + '...')
 
@@ -24,17 +24,15 @@ wordsRouter.post('/', async (request, response) => {
     picture: body.picture,
     sentence: body.sentence
   })
-  let savedWord = await word.save()
-  if (aiService.available() && !body.sentence && body.word.length < MAX_WORD_LENGTH_FOR_AI) {
-    logger.info('Generating example sentence for ' + savedWord.word + '...')
-    const c = await aiService.generateSentence(body.word)
-    logger.info('Sentence generated.')
-    const sentence = c.choices[0].message.content
-    savedWord.sentence = sentence
-    savedWord.save()
+  try {
+    let savedWord = await word.save()
+    savedWord = await generateSentence(savedWord)
+    savedWord = await updateImage(savedWord)
+    return response.status(201).json(savedWord)
   }
-  savedWord = await updateImage(savedWord)
-  return response.status(201).json(savedWord)
+  catch (error) {
+    return next(error)
+  }
 })
 
 // Update the meaning of an existing word
@@ -87,6 +85,18 @@ const updateImage = (word) => {
       logger.error(error)
       return word
     })
+}
+
+const generateSentence = async (word) => {
+  if (!aiService.available() || word.sentence || word.word.length > MAX_WORD_LENGTH_FOR_AI) {
+    return word
+  }
+  logger.info('Generating example sentence for ' + word.word + '...')
+  const c = await aiService.generateSentence(word.word)
+  logger.info('Sentence generated.')
+  const sentence = c.choices[0].message.content
+  word.sentence = sentence
+  return word.save()
 }
 
 module.exports = wordsRouter
