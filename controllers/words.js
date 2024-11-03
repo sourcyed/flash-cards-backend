@@ -7,12 +7,13 @@ const photoService = require('../services/photo')
 const MAX_WORD_LENGTH_FOR_AI = 50
 
 // Returns words list from database
-wordsRouter.get('/', (_request, response) => {
-  Word.find({}).then(ws => response.json(ws))
+wordsRouter.get('/', async (_request, response) => {
+  const words = await Word.find({})
+  response.json(words)
 })
 
 // Adds new word to database
-wordsRouter.post('/', (request, response) => {
+wordsRouter.post('/', async (request, response) => {
   const body = request.body
   logger.info('Adding word ' + body.word + '...')
 
@@ -23,37 +24,26 @@ wordsRouter.post('/', (request, response) => {
     picture: body.picture,
     sentence: body.sentence
   })
-  return word.save()
-    .then(savedWord => {
-      if (aiService.available() && !body.sentence && body.word.length < MAX_WORD_LENGTH_FOR_AI) {
-        logger.info('Generating example sentence for ' + savedWord.word + '...')
-        return aiService.generateSentence(body.word)
-          .then(c => {
-            logger.info('Sentence generated.')
-            const sentence = c.choices[0].message.content
-            savedWord.sentence = sentence
-            return savedWord.save()
-          })
-      } else {
-        return savedWord
-      }
-    })
-    .then(savedWord => {
-      return updateImage(savedWord)
-    })
-    .then(savedWord => {
-      return response.status(201).json(savedWord)
-    })
+  let savedWord = await word.save()
+  if (aiService.available() && !body.sentence && body.word.length < MAX_WORD_LENGTH_FOR_AI) {
+    logger.info('Generating example sentence for ' + savedWord.word + '...')
+    const c = await aiService.generateSentence(body.word)
+    logger.info('Sentence generated.')
+    const sentence = c.choices[0].message.content
+    savedWord.sentence = sentence
+    savedWord.save()
+  }
+  savedWord = await updateImage(savedWord)
+  return response.status(201).json(savedWord)
 })
 
 // Update the meaning of an existing word
-wordsRouter.put('/:id', (request, response) => {
+wordsRouter.put('/:id', async (request, response) => {
   const body = request.body
   const word = { word: body.word, meaning: body.meaning, sentence: body.sentence, picture: body.picture }
   logger.info('Updating word ' + word.word + '...')
-  Word.findByIdAndUpdate(request.params.id, word, { new: true, runValidators: true, context: 'query' }).then(updatedWord => {
-    response.json(updatedWord)
-  })
+  const updatedWord = await Word.findByIdAndUpdate(request.params.id, word, { new: true, runValidators: true, context: 'query' })
+  response.json(updatedWord)
 })
 
 // Delete word from database
@@ -71,14 +61,13 @@ wordsRouter.delete('/:id', (request, response) => {
 })
 
 // Replace word picture
-wordsRouter.get('/:id', (request, response) => {
-  Word.findById(request.params.id)
-    .then(word => {
-      if (!word) {
-        return response.status(404).end()
-      }
-      return updateImage(word).then(updatedWord => response.status(201).json(updatedWord))
-    })
+wordsRouter.get('/:id', async (request, response) => {
+  const word = await Word.findById(request.params.id)
+  if (!word) {
+    return response.status(404).end()
+  }
+  const updatedWord = await updateImage(word)
+  response.status(201).json(updatedWord)
 })
 
 // Return requested image
