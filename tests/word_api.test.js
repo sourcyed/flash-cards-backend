@@ -10,10 +10,12 @@ const helper = require('./test_helper')
 
 beforeEach(async () => {
   await Word.deleteMany({})
-  let wordObject = new Word(helper.initialWords[0])
-  await wordObject.save()
-  wordObject = new Word(helper.initialWords[1])
-  await wordObject.save()
+
+  const wordObjects = helper.initialWords
+    .map(word => new Word(word))
+  const promiseArray = wordObjects.map(word => word.save())
+  await Promise.all(promiseArray)
+
 })
 
 test('words are returned as json', async () => {
