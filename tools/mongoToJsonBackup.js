@@ -12,7 +12,7 @@ mongoose.connect(url)
   .then(() => {
     logger.info('connected to MongoDB')
 
-    const backup = '../backup/backup_' + new Date().toISOString() + '.json'
+    const backup = './backup/backup_' + new Date().toISOString() + '.json'
 
     Word.find({})
       .then(words => {
