@@ -6,7 +6,6 @@ const config = require('../utils/config')
 
 mongoose.set('strictQuery', false)
 const url = config.MONGODB_URI
-logger.info('connecting to', url)
 
 mongoose.connect(url)
   .then(() => {
