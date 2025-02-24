@@ -1,4 +1,5 @@
 const Word = require('../models/word')
+const User = require('../models/user')
 
 const initialWords = [
   {
@@ -24,6 +25,11 @@ const wordsInDb = async () => {
   return words.map(word => word.toJSON())
 }
 
+const usersInDb = async () => {
+  const users = await User.find({})
+  return users.map(user => user.toJSON())
+}
+
 module.exports = {
-  initialWords, nonExistingId, wordsInDb
+  initialWords, nonExistingId, wordsInDb, usersInDb
 }
