@@ -1,5 +1,7 @@
+const jwt = require('jsonwebtoken')
 const wordsRouter = require('express').Router()
 const Word = require('../models/word')
+const User = require('../models/user')
 const logger = require('../utils/logger')
 const aiService = require('../services/ai')
 const photoService = require('../services/photo')
@@ -7,15 +9,25 @@ const photoService = require('../services/photo')
 const MAX_WORD_LENGTH_FOR_AI = 50
 
 // Returns words list from database
-wordsRouter.get('/', async (_request, response) => {
-  const words = await Word.find({})
-  response.json(words)
+wordsRouter.get('/', async (request, response) => {
+  const decodedToken = jwt.verify(getTokenFrom(request), process.env.SECRET)
+  if (!decodedToken.id) {
+    return response.status(401).json({ error: 'token invalid '})
+  }
+  const user = await User.findById(decodedToken.id).populate('words')
+  response.json(user.words)
 })
 
 // Adds new word to database
 wordsRouter.post('/', async (request, response) => {
   const body = request.body
   logger.info('Adding word ' + body.word + '...')
+
+  const decodedToken = jwt.verify(getTokenFrom(request), process.env.SECRET)
+  if (!decodedToken.id) {
+    return response.status(401).json({ error: 'token invalid '})
+  }
+  const user = await User.findById(decodedToken.id)
 
   // Add word if example sentence is provided
   const word = new Word({
@@ -28,6 +40,8 @@ wordsRouter.post('/', async (request, response) => {
   let savedWord = await word.save()
   savedWord = await generateSentence(savedWord)
   savedWord = await updateImage(savedWord)
+  user.words = user.words.concat(savedWord._id)
+  await user.save()
   return response.status(201).json(savedWord)
 })
 
@@ -93,6 +107,14 @@ const generateSentence = async (word) => {
   const sentence = c.choices[0].message.content
   word.sentence = sentence
   return word.save()
+}
+
+const getTokenFrom = request => {
+  const authorization = request.get('authorization')
+  if (authorization && authorization.startsWith('Bearer ')) {
+    return authorization.replace('Bearer ', '')
+  }
+  return null
 }
 
 module.exports = wordsRouter
