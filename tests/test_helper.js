@@ -1,5 +1,8 @@
+const supertest = require('supertest')
 const Word = require('../models/word')
 const User = require('../models/user')
+const app = require('../app')
+const api = supertest(app)
 
 const initialWords = [
   {
@@ -30,6 +33,13 @@ const usersInDb = async () => {
   return users.map(user => user.toJSON())
 }
 
+const getTokenFrom = async (username, password) => {
+  const response = await api
+    .post('/api/login')
+    .send({ username, password })
+  return response.body.token
+}
+
 module.exports = {
-  initialWords, nonExistingId, wordsInDb, usersInDb
+  initialWords, nonExistingId, wordsInDb, usersInDb, getTokenFrom
 }

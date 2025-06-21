@@ -1,12 +1,13 @@
 const { test, after, beforeEach } = require('node:test')
 const assert = require('node:assert')
 const mongoose = require('mongoose')
+const bcrypt = require('bcrypt')
 const Word = require('../models/word')
 const supertest = require('supertest')
 const app = require('../app')
 const api = supertest(app)
 const helper = require('./test_helper')
-
+const User = require('../models/user')
 
 beforeEach(async () => {
   await Word.deleteMany({})
@@ -16,6 +17,11 @@ beforeEach(async () => {
   const promiseArray = wordObjects.map(word => word.save())
   await Promise.all(promiseArray)
 
+  await User.deleteMany({})
+  const passwordHash = await bcrypt.hash('secret', 10)
+  const user = new User({ username: 'root', passwordHash })
+
+  await user.save()
 })
 
 test('words are returned as json', async () => {
@@ -37,14 +43,16 @@ test('the first word is ensimmäinen', async () => {
   assert(words.includes('ensimmäinen'))
 })
 
-test('a valid word can be added', async () => {
+test('a valid word can be added with a valid user', async () => {
   const newWord = {
     word: 'testWord',
     meaning: 'testMeaning'
   }
 
+  const token = await helper.getTokenFrom('root', 'secret')
   await api
     .post('/api/words')
+    .set('Authorization', `Bearer ${token}`)
     .send(newWord)
     .expect(201)
     .expect('Content-Type', /application\/json/)
