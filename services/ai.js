@@ -16,7 +16,7 @@ const available = () => {
 const generateSentence = (word) => {
   return openai.chat.completions.create({
     model: 'gpt-4o-mini',
-    messages: [ { role: 'user', content: `Write an example sentence for '${word}', max 50 characters` } ]
+    messages: [ { role: 'user', content: `Write an example sentence for '${word}' in the language the word is in, max 50 characters` } ]
   })
 }
 
