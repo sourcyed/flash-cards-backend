@@ -8,7 +8,7 @@ const fs = require('fs')
 const DOMAIN = config.DOMAIN
 let PORT = config.PORT || 3001
 
-let server = app
+/*let server = app
 
 if (DOMAIN) {
   const options = {
@@ -18,8 +18,8 @@ if (DOMAIN) {
   }
   server = https.createServer(options,app)
   PORT = 443
-}
+}*/
 
-server.listen(PORT, () => {
+app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`)
 })
