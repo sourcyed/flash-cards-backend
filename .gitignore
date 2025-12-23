@@ -130,3 +130,6 @@ out
 
 # Backups
 backup/
+
+# Dist frontend
+dist/
