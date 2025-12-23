@@ -38,7 +38,7 @@ wordsRouter.post('/', async (request, response) => {
   })
 
   let savedWord = await word.save()
-  savedWord = await generateSentence(savedWord)
+  //savedWord = await generateSentence(savedWord)
   savedWord = await updateImage(savedWord)
   user.words = user.words.concat(savedWord._id)
   await user.save()
